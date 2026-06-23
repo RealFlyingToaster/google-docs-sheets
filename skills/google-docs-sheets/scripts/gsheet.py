@@ -422,7 +422,7 @@ def build_parser():
     sp.add_argument("--h-align", choices=["LEFT", "CENTER", "RIGHT"])
     sp.add_argument("--v-align", choices=["TOP", "MIDDLE", "BOTTOM"])
     sp.add_argument("--wrap", action="store_true")
-    sp.add_argument("--number-format", help='e.g. "$#,##0.00", "0.0%", "yyyy-mm-dd"')
+    sp.add_argument("--number-format", help='e.g. "$#,##0.00", "0.0%%", "yyyy-mm-dd"')
     sp.add_argument("--number-type",
                     choices=["NUMBER", "CURRENCY", "PERCENT", "DATE", "TIME",
                              "DATE_TIME", "SCIENTIFIC"],

@@ -1,0 +1,23 @@
+{
+  "name": "google-docs-sheets",
+  "displayName": "Google Docs & Sheets",
+  "version": "0.1.0",
+  "description": "Create, edit, and style Google Sheets and Google Docs with full fluency — values, formulas, formatting, headings, bullets, tables, find-and-replace, and a raw batchUpdate escape hatch for anything else.",
+  "author": {
+    "name": "Eightfold Way Consultants",
+    "email": "jack.eastman@gmail.com"
+  },
+  "homepage": "https://github.com/RealFlyingToaster/google-docs-sheets",
+  "repository": "https://github.com/RealFlyingToaster/google-docs-sheets",
+  "license": "MIT",
+  "keywords": [
+    "google",
+    "google-sheets",
+    "google-docs",
+    "spreadsheets",
+    "documents",
+    "workspace",
+    "nonprofit"
+  ],
+  "skills": ["./skills/"]
+}

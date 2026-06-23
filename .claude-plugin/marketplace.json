@@ -1,0 +1,18 @@
+{
+  "name": "eightfold-plugins",
+  "owner": {
+    "name": "Eightfold Way Consultants",
+    "email": "jack.eastman@gmail.com"
+  },
+  "description": "Plugins offered to Eightfold Way clients.",
+  "plugins": [
+    {
+      "name": "google-docs-sheets",
+      "source": "./",
+      "description": "Create, edit, and style Google Sheets and Google Docs with full fluency.",
+      "version": "0.1.0",
+      "author": { "name": "Eightfold Way Consultants" },
+      "license": "MIT"
+    }
+  ]
+}

@@ -255,15 +255,16 @@ def cmd_format(args):
         ntype = args.number_type or _guess_number_type(args.number_format)
         fmt["numberFormat"] = {"type": ntype, "pattern": args.number_format}
         fields.append("numberFormat")
-    if not fields:
-        raise SystemExit("format: nothing to do — pass at least one style flag")
-
-    requests = [{"repeatCell": {
-        "range": gr,
-        "cell": {"userEnteredFormat": fmt},
-        "fields": "userEnteredFormat(" + ",".join(fields) + ")"}}]
+    requests = []
+    if fields:
+        requests.append({"repeatCell": {
+            "range": gr,
+            "cell": {"userEnteredFormat": fmt},
+            "fields": "userEnteredFormat(" + ",".join(fields) + ")"}})
     if args.border:
         requests.append({"updateBorders": _all_borders(gr, args.border)})
+    if not requests:
+        raise SystemExit("format: nothing to do — pass at least one style flag")
     batch_update(args.id, requests)
     ga.out({"formatted": args.range, "fields": fields, "border": bool(args.border)})
 

@@ -31,11 +31,51 @@ server to run.
 (Or, while developing locally, point the marketplace at this directory:
 `/plugin marketplace add ./plugins/google-docs-sheets`.)
 
-Then set up credentials — see **[SETUP.md](SETUP.md)** — and install runtime deps:
+Then set up credentials (below) and install runtime deps:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+## Authentication
+
+The CLIs read credentials from the environment — no flags at call time. Set **one**
+of the following (first match wins); see **[SETUP.md](SETUP.md)** for the full
+walkthrough.
+
+```bash
+# Recommended: service-account JSON key (path or inline JSON)
+export GOOGLE_SERVICE_ACCOUNT_KEY="/secure/path/docs-bot.json"
+
+# Optional — Workspace domain-wide delegation: act AS a user, so files land in
+# their Drive instead of the service account's (quota-limited) Drive.
+export GOOGLE_IMPERSONATE_SUBJECT="staff@client.org"
+
+# Or, instead of a service account:
+export GOOGLE_ACCESS_TOKEN="ya29...."          # a ready OAuth access token
+export GOOGLE_OAUTH_REFRESH_TOKEN="1//0...."   # an OAuth refresh token
+```
+
+Two access models (detailed in SETUP.md):
+
+- **Tier 1 — shared access (default).** The service account only touches files/
+  folders explicitly shared with its email. No Workspace admin needed. Files it
+  *creates* are owned by the SA, so create them in a **Shared Drive** the account
+  belongs to (`--parent <sharedDriveFolderId>`).
+- **Tier 2 — domain-wide delegation.** A Workspace Super Admin authorizes the SA's
+  **Client ID** for the `spreadsheets`, `documents`, and `drive` scopes; then set
+  `GOOGLE_IMPERSONATE_SUBJECT` to act as a user. Required if the SA must operate
+  org-wide or write into users' personal Drives.
+
+In Claude Code, set these in your `settings.json` `env` block so every session
+picks them up. Verify wiring without touching data:
+
+```bash
+python3 "$CLAUDE_PLUGIN_ROOT/skills/google-docs-sheets/scripts/gsheet.py" \
+        create --title "Test" --dry-run
+```
+
+> Treat the JSON key like a password: store it outside the repo and never commit it.
 
 ## Quick start
 
@@ -66,11 +106,13 @@ Add `--dry-run` to any command to print the request JSON without calling the API
   formatting (bold/italic/font/size/color/background/alignment/wrap), number &
   currency & date formats, borders, frozen rows/cols, merged cells, column/row
   sizing, and raw `batch` (conditional formatting, charts, validation, …).
-- **Docs:** create, get (text / per-paragraph index ranges / raw), append, insert,
-  find-and-replace, character styling (bold/italic/underline/strike/font/size/
-  color/highlight/link), paragraph styling (named styles/headings, alignment),
-  bullet & numbered lists, tables, and raw `batch` (images, page breaks, table
-  cell styling, …).
+- **Docs:** create, get (text / per-paragraph index ranges / raw), append, insert
+  (text inline or from a UTF-8 file/stdin via `--text-file`), find-and-replace,
+  character styling (bold/italic/underline/strike/font/size/color/highlight/link),
+  paragraph styling (named styles/headings, alignment), bullet & numbered &
+  **checkbox** lists (`--bullet-preset BULLET_CHECKBOX` for to-do worksheets),
+  tables, Drive **comments** (list/add/reply/resolve), and raw `batch` (images,
+  page breaks, table cell styling, …).
 
 See `skills/google-docs-sheets/references/` for the exact `batchUpdate` request
 shapes behind the `batch` command.

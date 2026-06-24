@@ -68,13 +68,27 @@ Ranges accept A1 with an optional tab prefix (`"Data!A1:D1"`, `"A:A"`, `"2:5"`,
 |---|---|
 | `create --title T [--parent FOLDER]` | new document |
 | `get <id> [--ranges] [--json]` | plain text / per-paragraph indices / raw |
-| `append <id> --text "...\n"` | add text to end of body |
-| `insert <id> --index N --text "..."` | insert at an index |
+| `append <id> --text "...\n"` (or `--text-file F`) | add text to end of body |
+| `insert <id> --index N --text "..."` (or `--text-file F`) | insert at an index |
 | `replace <id> --find X --replace Y [--match-case]` | find & replace all |
 | `style <id> --start S --end E [flags]` | character styling (below) |
 | `para <id> --start S --end E [flags]` | paragraph styling / headings / bullets |
 | `table <id> --rows R --cols C [--index N]` | insert a table |
+| `comments <id> [--add T] [--reply-to CID] [--resolve CID]` | list/add/reply/resolve comments |
 | `batch <id> --requests-json '[...]'` | raw `documents.batchUpdate` |
+
+`para` bullets do checkbox to-do lists with `--bullet --bullet-preset
+BULLET_CHECKBOX` (other presets: `BULLET_DISC_CIRCLE_SQUARE`,
+`NUMBERED_DECIMAL_ALPHA_ROMAN`).
+
+For body text with non-ASCII characters (em-dashes, smart quotes, accents,
+emoji), prefer `--text-file` (a UTF-8 file, or `-` for stdin) over `--text`: it
+bypasses the shell command line, which on Windows/Git Bash mangles non-ASCII
+before the CLI sees it.
+
+`comments` uses the Drive API (not Docs `batchUpdate`); the account needs at
+least comment access to the file. `--reply-to`/`--resolve` take a comment id and
+read reply text from `--text`/`--text-file`.
 
 `style` flags: `--bold --italic --underline --strikethrough --font-size N
 --font NAME --color #hex --bg #hex --link URL`.

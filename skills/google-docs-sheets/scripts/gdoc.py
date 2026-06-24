@@ -20,6 +20,10 @@ Examples:
   gdoc replace <id> --find "{{client}}" --replace "Acme Corp"
   gdoc table  <id> --rows 3 --cols 4
   gdoc batch  <id> --requests-json '[{"insertText": ...}]'
+  gdoc append <id> --text-file brief.md     # non-ASCII-safe (bypasses the shell)
+  gdoc comments <id>                         # list comments
+  gdoc comments <id> --add "Please review the budget line"
+  gdoc comments <id> --resolve <commentId>
 """
 import argparse
 import json
@@ -27,6 +31,7 @@ import json
 import google_auth as ga
 
 DOCS = "https://docs.googleapis.com/v1/documents"
+DRIVE = "https://www.googleapis.com/drive/v3/files"
 
 
 # ---------------------------------------------------------------- helpers ----
@@ -69,6 +74,25 @@ def unescape(text):
     return text.replace("\\n", "\n").replace("\\t", "\t")
 
 
+def resolve_text(args):
+    """Text from --text-file (raw UTF-8; '-' = stdin) or --text (\\n unescaped).
+
+    Prefer --text-file for content with non-ASCII characters: it bypasses the
+    shell command line, which on some platforms (Windows/Git Bash) mangles
+    em-dashes, smart quotes, accents, and emoji before the CLI ever sees them.
+    """
+    tf = getattr(args, "text_file", None)
+    if tf:
+        if tf == "-":
+            import sys
+            return sys.stdin.read()
+        with open(tf, encoding="utf-8") as f:
+            return f.read()
+    if args.text is None:
+        raise SystemExit("pass --text or --text-file")
+    return unescape(args.text)
+
+
 # --------------------------------------------------------------- commands ----
 
 def cmd_create(args):
@@ -96,14 +120,14 @@ def cmd_get(args):
 
 
 def cmd_append(args):
-    text = unescape(args.text)
+    text = resolve_text(args)
     batch_update(args.id, [{"insertText": {
         "text": text, "endOfSegmentLocation": {"segmentId": ""}}}])
     ga.out({"appended": len(text)})
 
 
 def cmd_insert(args):
-    text = unescape(args.text)
+    text = resolve_text(args)
     batch_update(args.id, [{"insertText": {
         "text": text, "location": {"index": args.index}}}])
     ga.out({"inserted": len(text), "at": args.index})
@@ -195,6 +219,39 @@ def cmd_batch(args):
     ga.out(batch_update(args.id, requests))
 
 
+def cmd_comments(args):
+    """List / add / reply-to / resolve Drive comments on the document.
+
+    Comments live in the Drive API (not Docs batchUpdate). The service account
+    or impersonated user must have at least comment access to the file.
+    """
+    base = f"{DRIVE}/{args.id}/comments"
+    rfields = "id,content,author/displayName,createdTime"
+    if args.resolve:
+        res = ga.api("POST", f"{base}/{args.resolve}/replies",
+                     json_body={"content": args.text or "Resolved",
+                                "action": "resolve"},
+                     params={"fields": "id,action,content"})
+        ga.out({"resolved": args.resolve, "reply": res})
+    elif args.reply_to:
+        text = resolve_text(args)
+        res = ga.api("POST", f"{base}/{args.reply_to}/replies",
+                     json_body={"content": text}, params={"fields": rfields})
+        ga.out({"repliedTo": args.reply_to, "reply": res})
+    elif args.add is not None or getattr(args, "text_file", None):
+        text = args.add if args.add is not None else resolve_text(args)
+        res = ga.api("POST", base, json_body={"content": text},
+                     params={"fields": rfields})
+        ga.out({"added": res})
+    else:
+        res = ga.api("GET", base, params={
+            "pageSize": "100",
+            "fields": "comments(id,content,resolved,author/displayName,"
+                      "createdTime,replies(content,action,author/displayName,"
+                      "createdTime))"})
+        ga.out({"comments": res.get("comments", [])})
+
+
 # ----------------------------------------------------------------- parser ----
 
 def build_parser():
@@ -224,13 +281,17 @@ def build_parser():
 
     sp = addp("append", help="append text to end of body")
     sp.add_argument("id")
-    sp.add_argument("--text", required=True, help="use \\n for newlines")
+    sp.add_argument("--text", help="use \\n for newlines")
+    sp.add_argument("--text-file", help="read body from a UTF-8 file ('-' = stdin); "
+                    "preferred for non-ASCII content on Windows")
     sp.set_defaults(func=cmd_append)
 
     sp = addp("insert", help="insert text at an index")
     sp.add_argument("id")
     sp.add_argument("--index", type=int, required=True)
-    sp.add_argument("--text", required=True)
+    sp.add_argument("--text")
+    sp.add_argument("--text-file", help="read text from a UTF-8 file ('-' = stdin); "
+                    "preferred for non-ASCII content on Windows")
     sp.set_defaults(func=cmd_insert)
 
     sp = addp("replace", help="find & replace all")
@@ -282,6 +343,19 @@ def build_parser():
     sp.add_argument("--requests-json")
     sp.add_argument("--requests-file")
     sp.set_defaults(func=cmd_batch)
+
+    sp = addp("comments", help="list/add/reply/resolve Drive comments")
+    sp.add_argument("id")
+    sp.add_argument("--add", metavar="TEXT",
+                    help="add a top-level comment (omit to list)")
+    sp.add_argument("--reply-to", metavar="COMMENT_ID",
+                    help="reply to a comment (text from --text/--text-file)")
+    sp.add_argument("--resolve", metavar="COMMENT_ID",
+                    help="resolve a comment (optional --text for the reply)")
+    sp.add_argument("--text", help="text for --reply-to / --resolve")
+    sp.add_argument("--text-file", help="read comment text from a UTF-8 file "
+                    "('-' = stdin)")
+    sp.set_defaults(func=cmd_comments)
 
     return p
 

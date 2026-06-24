@@ -6,3 +6,7 @@ venv/
 service-account*.json
 .env
 .DS_Store
+
+# local doc dumps (private, do not commit)
+google-doc-raw.htm
+*.htm

@@ -10,7 +10,7 @@
       "name": "google-docs-sheets",
       "source": "./",
       "description": "Create, edit, and style Google Sheets and Google Docs with full fluency.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": { "name": "Eightfold Way Consultants" },
       "license": "MIT"
     }
